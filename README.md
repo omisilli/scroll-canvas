@@ -381,17 +381,51 @@ returned function lets the canvas go. With Lenis, mount gsap-connector's
 `GsapConnector` once in the root layout. See
 [`examples/react/Example.tsx`](examples/react/Example.tsx).
 
+## With Lenis — what we recommend
+
+A scene that follows the scroll shows every wobble of it. With Lenis on the
+page:
+
+```ts
+const lenis = new Lenis({ autoRaf: true }); // lerp: 0.1, its default — no duration, no easing
+connectGsap({ gsap, ScrollTrigger, lenis });
+
+gsap.timeline({ scrollTrigger: { trigger: ".scene", pin: true, scrub: lenis ? true : 1, end: "+=300%" } });
+```
+
+**Lenis: `lerp`, not `duration`.** The two are for different moves:
+
+| Setting                | For                                  | How it moves                                                                 |
+| ---------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
+| `lerp`                 | The wheel and the trackpad           | Each frame closes part of the distance left; events coming one after another still flow as one glide |
+| `duration` + `easing`  | Going to one place — `scrollTo`      | One move with a set start and end                                            |
+
+Given `duration` and `easing` in its options, Lenis uses them for the wheel
+too, and starts the curve again on every wheel event — a trackpad sends
+dozens a second, the speed jumps each time, and the frames jump with it.
+(Lenis's documentation says `duration` is unused once `lerp` is set; its
+code, 1.3.26, does the opposite: `duration` and `easing` win.) So leave both
+out of the options, and give a duration to `scrollTo` alone — the anchor
+package does, for its glide to a heading.
+
+**Smooth once: `scrub: true`.** `scrub: 1` makes the frames catch up with
+the scroll over a second. Without Lenis that is what smooths the browser's
+scroll; with Lenis, which glides already, it smooths twice — the frames
+trail the finger twice over and feel heavy.
+
+**Enough frames for the scroll.** Each frame holds still while the scroll
+passes its share — `+=300%` on a screen 900px tall is 2700px; with 100
+frames, 27px each. Lenis moves the page so evenly that the steps between
+frames show more than with the browser's scroll: give the scene more
+frames, or a shorter pin.
+
+**Through gsap-connector, nothing else.** It runs Lenis on GSAP's clock and
+updates ScrollTrigger on every Lenis scroll. Do not create a second Lenis
+for the scene.
+
 ## Alongside
 
-- **Lenis** — through gsap-connector, nothing else. Do not create a second
-  Lenis for the scene. Smooth once: `scrub: true` with Lenis, `scrub: 1`
-  without; Lenis with its default `lerp`, not `duration` — see
-  gsap-connector's "With Lenis, smooth once".
-- **Enough frames for the scroll.** Each frame holds still while the scroll
-  passes its share — `+=300%` on a screen 900px tall is 2700px; with 100
-  frames, 27px each. Lenis moves the page so evenly that the steps between
-  frames show more than with the browser's scroll: give the scene more
-  frames, or a shorter pin.
+- **Lenis** — see [With Lenis](#with-lenis--what-we-recommend) above.
 - **The PlusGuard scrollbar** — the pin adds the scene's length to the page;
   gsap-connector refreshes ScrollTrigger, the scrollbar watches the page's
   size: both follow.
