@@ -202,7 +202,8 @@
         <section class="scene" id="scene">
             <canvas id="canvas" aria-label="The Yan Yana sofa, taken apart and put together"></canvas>
             <p class="title">Every module, more possibilities</p>
-            <a class="btn" href="#after">Discover Yan Yana →</a>
+            <!-- The tool that made these frames: a video in, frames out. -->
+            <a class="btn" href="../../tools/convert.html" target="_blank" rel="noopener">Make frames from a video →</a>
         </section>
 
         <main class="page" id="after">
@@ -288,13 +289,15 @@
             const show = () => {
                 const set = getComputedStyle(canvas).getPropertyValue("--pg-scroll-canvas-set").trim() || "wide";
                 const count = frames[set]?.count ?? 0;
-                const loaded = performance
-                    .getEntriesByType("resource")
-                    .filter((r) => r.name.includes(`/frames/${set}/`)).length;
+                // Opened from the disk (file://), the browser times nothing.
+                const loaded =
+                    location.protocol === "file:"
+                        ? "– (file://)"
+                        : performance.getEntriesByType("resource").filter((r) => r.name.includes(`/frames/${set}/`)).length;
                 status.textContent =
                     `Lenis  : ${lenis ? "on, via gsap-connector" : "off"}\n` +
                     `set    : ${set} · ${canvas.width}×${canvas.height}px\n` +
-                    `loaded : ${Math.min(loaded, count)} / ${count}\n` +
+                    `loaded : ${typeof loaded === "number" ? Math.min(loaded, count) : loaded} / ${count}\n` +
                     `state  : ${canvas.getAttribute("data-pg-scroll-canvas")}\n` +
                     `frame  : ${Math.round(tl.progress() * (count - 1))}`;
                 requestAnimationFrame(show);

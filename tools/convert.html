@@ -196,11 +196,33 @@
                 return 0;
             }
 
+            // Open a video — or say why it cannot be opened: a codec this
+            // browser does not play (HEVC or ProRes .mov, often, from a Mac).
             async function open(f) {
                 file = f;
+                $("go").disabled = true;
                 $("drop-text").textContent = `${f.name} · ${(f.size / 1048576).toFixed(1)} MB`;
+                $("info").textContent = "Opening…";
                 video.src = URL.createObjectURL(f);
-                await new Promise((r) => video.addEventListener("loadeddata", r, { once: true }));
+                const ok = await new Promise((r) => {
+                    const done = (v) => {
+                        clearTimeout(timer);
+                        video.removeEventListener("loadeddata", yes);
+                        video.removeEventListener("error", no);
+                        r(v);
+                    };
+                    const yes = () => done(true);
+                    const no = () => done(false);
+                    const timer = setTimeout(no, 15000);
+                    video.addEventListener("loadeddata", yes);
+                    video.addEventListener("error", no);
+                });
+                if (!ok) {
+                    $("info").textContent =
+                        `This browser cannot play ${f.name}. Its video is probably HEVC or ProRes (common in .mov from a Mac or an iPhone): ` +
+                        "export it as an H.264 MP4 — QuickTime: File › Export As, or HandBrake — or open this page in Safari, which plays HEVC.";
+                    return;
+                }
                 const counted = await framesIn(f);
                 $("count").value = counted || Math.round(video.duration * 30);
                 $("wide").value = video.videoWidth - (video.videoWidth % 2);
@@ -212,13 +234,17 @@
             }
 
             $("file").addEventListener("change", (e) => e.target.files[0] && open(e.target.files[0]));
+            // Dropped anywhere on the page, not only on the box: otherwise the
+            // browser leaves this page to show the video itself.
             const drop = $("drop");
-            drop.addEventListener("dragover", (e) => {
+            addEventListener("dragover", (e) => {
                 e.preventDefault();
                 drop.dataset.over = "true";
             });
-            drop.addEventListener("dragleave", () => (drop.dataset.over = "false"));
-            drop.addEventListener("drop", (e) => {
+            addEventListener("dragleave", (e) => {
+                if (!e.relatedTarget) drop.dataset.over = "false";
+            });
+            addEventListener("drop", (e) => {
                 e.preventDefault();
                 drop.dataset.over = "false";
                 if (e.dataTransfer.files[0]) open(e.dataTransfer.files[0]);
