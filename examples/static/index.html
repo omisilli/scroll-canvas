@@ -1,0 +1,305 @@
+<!doctype html>
+<!-- Open by double-clicking: the scripts load from jsDelivr, the frames sit
+     beside this file. Pinned to this release, so the page and the code
+     always match. The switches reload the page with ?lenis, ?set, ?fit,
+     ?scrub and ?extras. The frames are Gaga Furniture's "Yan Yana" sofa,
+     taken apart and put together — used with permission. -->
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>scroll-canvas — example</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.0.0/index.css" />
+        <!-- Only takes effect with ?lenis: it styles html.lenis. -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.css" />
+        <style>
+            :root {
+                --bg: #f6f6f4;
+                --surface: #ffffff;
+                --fg: #18181b;
+                --muted: #6b6b72;
+                --line: #e4e4e0;
+                color-scheme: light dark;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #111113;
+                    --surface: #1b1b1f;
+                    --fg: #ededef;
+                    --muted: #9a9aa3;
+                    --line: #2c2c31;
+                }
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+            }
+            body {
+                font:
+                    16px/1.6 system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    Roboto,
+                    sans-serif;
+                color: var(--fg);
+                background: var(--bg);
+            }
+            code {
+                font:
+                    0.85em/1.4 ui-monospace,
+                    SFMono-Regular,
+                    Menlo,
+                    monospace;
+                padding: 0.15em 0.4em;
+                border-radius: 0.35em;
+                background: color-mix(in srgb, var(--fg) 8%, transparent);
+            }
+            .page {
+                max-width: 46rem;
+                margin: 0 auto;
+                padding: 4rem 1.25rem;
+                display: grid;
+                gap: 1.5rem;
+            }
+            h1 {
+                font-size: 1.6rem;
+            }
+            h2 {
+                font-size: 1.1rem;
+            }
+            .page p {
+                color: var(--muted);
+            }
+            .switches {
+                display: grid;
+                gap: 0.6rem;
+                font-size: 0.9rem;
+            }
+            .switches > div {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.4rem;
+            }
+            .switches span {
+                min-width: 11rem;
+                color: var(--muted);
+            }
+            .switches a {
+                color: inherit;
+                text-decoration: none;
+                padding: 0.3rem 0.7rem;
+                border: 1px solid var(--line);
+                border-radius: 0.5rem;
+                background: var(--surface);
+            }
+            .switches a[aria-current="true"] {
+                background: var(--fg);
+                color: var(--bg);
+                border-color: var(--fg);
+            }
+            .status {
+                position: fixed;
+                top: 0.75rem;
+                right: 0.75rem;
+                z-index: 10;
+                font:
+                    0.75rem/1.6 ui-monospace,
+                    SFMono-Regular,
+                    Menlo,
+                    monospace;
+                white-space: pre;
+                padding: 0.5rem 0.75rem;
+                border-radius: 0.6rem;
+                color: var(--bg);
+                background: color-mix(in srgb, var(--fg) 88%, transparent);
+            }
+
+            /* The scene: one screen, pinned while the frames play. The
+               frames are white; so is the scene. */
+            .scene {
+                position: relative;
+                height: 100svh;
+                overflow: hidden;
+                background: #fff;
+            }
+            /* A phone gets the phone set: half the frames, half the width. */
+            @media (width < 48rem) {
+                .scene canvas {
+                    --pg-scroll-canvas-set: phone;
+                }
+            }
+            .scene .title {
+                position: absolute;
+                top: 10%;
+                left: 0;
+                right: 0;
+                padding: 0 1rem;
+                text-align: center;
+                font-size: clamp(1.4rem, 4.5vw, 2.8rem);
+                font-weight: 800;
+                color: #18181b;
+            }
+            .scene .btn {
+                position: absolute;
+                left: 50%;
+                bottom: 8%;
+                translate: -50% 0;
+                padding: 0.9rem 1.6rem;
+                border-radius: 999px;
+                color: #fff;
+                background: #18181b;
+                text-decoration: none;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="status" id="status"></div>
+
+        <main class="page">
+            <h1>scroll-canvas</h1>
+            <p>
+                Scroll down: the sofa below comes apart and goes back together with the scroll, forwards and
+                back — 256 frames drawn on a canvas, the way Apple's product pages do it. GSAP's ScrollTrigger
+                pins the scene and drives the timeline; <code>scrollCanvas(canvas, { gsap, frames })</code> is the
+                sequence's part of it, and the title and the button are two more tweens on it.
+            </p>
+            <div class="switches">
+                <div>
+                    <span>Smooth scroll</span>
+                    <a data-q="lenis" data-v="">without Lenis</a>
+                    <a data-q="lenis" data-v="1">with Lenis (and gsap-connector)</a>
+                </div>
+                <div>
+                    <span>Frame set</span>
+                    <a data-q="set" data-v="">by screen — CSS</a>
+                    <a data-q="set" data-v="wide">wide · 256 × 2176px</a>
+                    <a data-q="set" data-v="phone">phone · 128 × 1088px</a>
+                </div>
+                <div>
+                    <span>Fit</span>
+                    <a data-q="fit" data-v="">cover — fill, cut the rest</a>
+                    <a data-q="fit" data-v="contain">contain — show it all</a>
+                </div>
+                <div>
+                    <span>The frames follow</span>
+                    <a data-q="scrub" data-v="">smoothly — scrub: 1</a>
+                    <a data-q="scrub" data-v="true">exactly — scrub: true</a>
+                </div>
+                <div>
+                    <span>Along with it, on the timeline</span>
+                    <a data-q="extras" data-v="">a title, a button</a>
+                    <a data-q="extras" data-v="0">the frames alone</a>
+                </div>
+            </div>
+            <p id="explain"></p>
+            <p>↓ Scroll</p>
+            <div style="height: 30vh"></div>
+        </main>
+
+        <section class="scene" id="scene">
+            <canvas id="canvas" aria-label="The Yan Yana sofa, taken apart and put together"></canvas>
+            <p class="title">Every module, more possibilities</p>
+            <a class="btn" href="#after">Discover Yan Yana →</a>
+        </section>
+
+        <main class="page" id="after">
+            <h2>After the scene</h2>
+            <p>
+                Scroll back up: it plays backwards just as smoothly — each frame is a picture already in memory,
+                only drawn. Watch the panel on a slow connection: the first frame comes at once, then frames
+                here and there across the whole sequence, then the gaps between.
+            </p>
+            <div style="height: 80vh"></div>
+        </main>
+
+        <!-- GSAP: the page's own, loaded once. -->
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+        <script type="module">
+            import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.0.0/dist/index.js";
+            import { connectGsap } from "https://cdn.jsdelivr.net/gh/omisilli/gsap-connector@v1/dist/index.js";
+
+            const { gsap, ScrollTrigger } = window;
+            gsap.registerPlugin(ScrollTrigger);
+
+            const query = new URLSearchParams(location.search);
+            const withLenis = query.get("lenis") === "1";
+            const forced = query.get("set");
+            const fit = query.get("fit") === "contain" ? "contain" : "cover";
+            const scrub = query.get("scrub") === "true" ? true : 1;
+            const extras = query.get("extras") !== "0";
+
+            let lenis = null;
+            if (withLenis) {
+                const { default: Lenis } = await import("https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.mjs");
+                lenis = new Lenis({ autoRaf: true });
+            }
+            connectGsap({ gsap, ScrollTrigger, lenis });
+
+            // The switches set what a stylesheet would: the set, the fit.
+            const canvas = document.getElementById("canvas");
+            if (forced) canvas.style.setProperty("--pg-scroll-canvas-set", forced);
+            canvas.style.setProperty("--pg-scroll-canvas-fit", fit);
+
+            // Two sets: "wide" first, the default; "phone" where the CSS
+            // above says so.
+            const frames = {
+                wide: { src: "./frames/wide/{0000}.webp", count: 256 },
+                phone: { src: "./frames/phone/{0000}.webp", count: 128 },
+            };
+
+            const tl = gsap.timeline({
+                scrollTrigger: { trigger: "#scene", start: "top top", end: "+=500%", pin: true, scrub },
+            });
+            tl.add(scrollCanvas(canvas, { gsap, frames }), 0);
+            if (extras) {
+                tl.from(".title", { opacity: 0, y: 30, duration: 0.1 }, 0.3).from(
+                    ".btn",
+                    { opacity: 0, y: 40, duration: 0.1 },
+                    0.8,
+                );
+            } else {
+                gsap.set([".title", ".btn"], { opacity: 0 });
+            }
+
+            // The switches: each one a link to this page with one value changed.
+            document.querySelectorAll("[data-q]").forEach((a) => {
+                const next = new URLSearchParams(query);
+                if (a.dataset.v) next.set(a.dataset.q, a.dataset.v);
+                else next.delete(a.dataset.q);
+                a.href = `?${next}`;
+                if ((query.get(a.dataset.q) ?? "") === a.dataset.v) a.setAttribute("aria-current", "true");
+            });
+            document.getElementById("explain").textContent =
+                (fit === "cover"
+                    ? "cover — the frames fill the screen; what is over is cut. "
+                    : "contain — every frame shown whole, the rest of the screen left to the page. ") +
+                (scrub === 1
+                    ? "scrub: 1 — the frames catch up with the scroll over a second: soft."
+                    : "scrub: true — the frame is exactly where the scroll is.");
+
+            // What is running. (The browser keeps 250 timings by default;
+            // the panel counts up to 256 frames.)
+            performance.setResourceTimingBufferSize(1000);
+            const status = document.getElementById("status");
+            const show = () => {
+                const set = getComputedStyle(canvas).getPropertyValue("--pg-scroll-canvas-set").trim() || "wide";
+                const count = frames[set]?.count ?? 0;
+                const loaded = performance
+                    .getEntriesByType("resource")
+                    .filter((r) => r.name.includes(`/frames/${set}/`)).length;
+                status.textContent =
+                    `Lenis  : ${lenis ? "on, via gsap-connector" : "off"}\n` +
+                    `set    : ${set} · ${canvas.width}×${canvas.height}px\n` +
+                    `loaded : ${Math.min(loaded, count)} / ${count}\n` +
+                    `state  : ${canvas.getAttribute("data-pg-scroll-canvas")}\n` +
+                    `frame  : ${Math.round(tl.progress() * (count - 1))}`;
+                requestAnimationFrame(show);
+            };
+            show();
+        </script>
+    </body>
+</html>

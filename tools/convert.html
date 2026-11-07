@@ -1,0 +1,285 @@
+<!doctype html>
+<!-- A video into frames for scroll-canvas, in the browser — no ffmpeg, no
+     upload: the video never leaves this computer. Open by double-clicking.
+     Out comes one zip: wide/0000.webp …, phone/0000.webp …, and the frames
+     setting to paste. -->
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>scroll-canvas — video to frames</title>
+        <style>
+            :root {
+                --bg: #f6f6f4;
+                --surface: #ffffff;
+                --fg: #18181b;
+                --muted: #6b6b72;
+                --line: #e4e4e0;
+                --accent: #2f5bea;
+                color-scheme: light dark;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #111113;
+                    --surface: #1b1b1f;
+                    --fg: #ededef;
+                    --muted: #9a9aa3;
+                    --line: #2c2c31;
+                    --accent: #7c9cff;
+                }
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+            }
+            body {
+                font:
+                    16px/1.6 system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    Roboto,
+                    sans-serif;
+                color: var(--fg);
+                background: var(--bg);
+            }
+            main {
+                max-width: 44rem;
+                margin: 0 auto;
+                padding: 3rem 1.25rem;
+                display: grid;
+                gap: 1.25rem;
+            }
+            p,
+            label span {
+                color: var(--muted);
+            }
+            code,
+            pre {
+                font:
+                    0.85em/1.5 ui-monospace,
+                    SFMono-Regular,
+                    Menlo,
+                    monospace;
+            }
+            pre {
+                padding: 0.75rem 1rem;
+                border-radius: 0.6rem;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                overflow-x: auto;
+            }
+            .drop {
+                display: grid;
+                place-items: center;
+                min-height: 9rem;
+                padding: 1.5rem;
+                text-align: center;
+                border: 2px dashed var(--line);
+                border-radius: 0.9rem;
+                background: var(--surface);
+                cursor: pointer;
+            }
+            .drop[data-over="true"] {
+                border-color: var(--accent);
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+                gap: 0.75rem;
+            }
+            label {
+                display: grid;
+                gap: 0.25rem;
+                font-size: 0.9rem;
+            }
+            input[type="number"] {
+                font: inherit;
+                color: inherit;
+                padding: 0.4rem 0.6rem;
+                border: 1px solid var(--line);
+                border-radius: 0.5rem;
+                background: var(--surface);
+            }
+            button {
+                font: inherit;
+                padding: 0.6rem 1.2rem;
+                border: 0;
+                border-radius: 0.6rem;
+                color: var(--bg);
+                background: var(--fg);
+                cursor: pointer;
+                justify-self: start;
+            }
+            button:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+            progress {
+                width: 100%;
+            }
+            video {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Video to frames</h1>
+            <p>
+                For <code>scroll-canvas</code>. Drop a video: every frame is taken and saved as WebP — once at full
+                width for wide screens, once smaller and fewer for phones. It all happens here, in this browser.
+            </p>
+
+            <label class="drop" id="drop">
+                <input type="file" id="file" accept="video/*" hidden />
+                <span id="drop-text">Drop a video here, or click to choose one</span>
+            </label>
+
+            <div class="grid">
+                <label><span>Frames in the video</span><input type="number" id="count" min="2" /></label>
+                <label><span>Wide · width (px)</span><input type="number" id="wide" min="16" step="2" /></label>
+                <label><span>Phone · width (px)</span><input type="number" id="phone" min="16" step="2" /></label>
+                <label><span>Phone · every nth frame</span><input type="number" id="nth" min="1" value="2" /></label>
+                <label><span>Quality (0.5 – 1)</span><input type="number" id="quality" min="0.5" max="1" step="0.05" value="0.8" /></label>
+            </div>
+
+            <button type="button" id="go" disabled>Make the frames</button>
+            <progress id="bar" value="0" max="1" hidden></progress>
+            <p id="info"></p>
+            <pre id="code" hidden></pre>
+            <video id="video" muted playsinline preload="auto"></video>
+        </main>
+
+        <script type="module">
+            import { zipSync } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
+
+            const $ = (id) => document.getElementById(id);
+            const video = $("video");
+            let file = null;
+
+            // An MP4 / MOV lists its frames: the sample count (stsz) of the
+            // track whose handler is "vide" — not the sound's. Anything else:
+            // estimated from 30 frames a second.
+            async function framesIn(f) {
+                const bytes = new Uint8Array(await f.arrayBuffer());
+                const view = new DataView(bytes.buffer);
+                const tag = (i) => String.fromCharCode(bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]);
+                // The boxes inside [from, to): [type, start, end].
+                const boxes = (from, to) => {
+                    const out = [];
+                    for (let i = from; i + 8 <= to; ) {
+                        let size = view.getUint32(i);
+                        let head = 8;
+                        if (size === 1) {
+                            size = Number(view.getBigUint64(i + 8));
+                            head = 16;
+                        } else if (size === 0) size = to - i;
+                        if (size < head) break;
+                        out.push([tag(i + 4), i + head, i + size]);
+                        i += size;
+                    }
+                    return out;
+                };
+                const find = (from, to, type) => boxes(from, to).find(([t]) => t === type);
+                const moov = find(0, bytes.length, "moov");
+                if (!moov) return 0;
+                for (const [type, start, end] of boxes(moov[1], moov[2])) {
+                    if (type !== "trak") continue;
+                    const mdia = find(start, end, "mdia");
+                    const hdlr = mdia && find(mdia[1], mdia[2], "hdlr");
+                    if (!hdlr || tag(hdlr[1] + 8) !== "vide") continue;
+                    const minf = find(mdia[1], mdia[2], "minf");
+                    const stbl = minf && find(minf[1], minf[2], "stbl");
+                    const stsz = stbl && find(stbl[1], stbl[2], "stsz");
+                    if (stsz) return view.getUint32(stsz[1] + 8);
+                }
+                return 0;
+            }
+
+            async function open(f) {
+                file = f;
+                $("drop-text").textContent = `${f.name} · ${(f.size / 1048576).toFixed(1)} MB`;
+                video.src = URL.createObjectURL(f);
+                await new Promise((r) => video.addEventListener("loadeddata", r, { once: true }));
+                const counted = await framesIn(f);
+                $("count").value = counted || Math.round(video.duration * 30);
+                $("wide").value = video.videoWidth - (video.videoWidth % 2);
+                $("phone").value = Math.round(video.videoWidth / 4) * 2;
+                $("info").textContent =
+                    `${video.videoWidth} × ${video.videoHeight}, ${video.duration.toFixed(2)} s` +
+                    (counted ? `, ${counted} frames` : " — frames estimated: check the count");
+                $("go").disabled = false;
+            }
+
+            $("file").addEventListener("change", (e) => e.target.files[0] && open(e.target.files[0]));
+            const drop = $("drop");
+            drop.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                drop.dataset.over = "true";
+            });
+            drop.addEventListener("dragleave", () => (drop.dataset.over = "false"));
+            drop.addEventListener("drop", (e) => {
+                e.preventDefault();
+                drop.dataset.over = "false";
+                if (e.dataTransfer.files[0]) open(e.dataTransfer.files[0]);
+            });
+
+            // Each frame: seek to its middle, draw it at the width, save WebP.
+            async function take(count, widths, quality, nth, step) {
+                const out = {};
+                const sets = widths.map((w) => {
+                    const h = Math.round((video.videoHeight / video.videoWidth) * w / 2) * 2;
+                    const c = new OffscreenCanvas(w, h);
+                    const ctx = c.getContext("2d");
+                    ctx.imageSmoothingQuality = "high";
+                    return { c, ctx, w, h };
+                });
+                let phoneIndex = 0;
+                for (let i = 0; i < count; i++) {
+                    video.currentTime = ((i + 0.5) * video.duration) / count;
+                    await new Promise((r) => video.addEventListener("seeked", r, { once: true }));
+                    for (const [k, s] of sets.entries()) {
+                        const name = k === 0 ? "wide" : "phone";
+                        if (name === "phone" && i % nth) continue;
+                        const n = name === "wide" ? i : phoneIndex;
+                        s.ctx.drawImage(video, 0, 0, s.w, s.h);
+                        const blob = await s.c.convertToBlob({ type: "image/webp", quality });
+                        out[`${name}/${String(n).padStart(4, "0")}.webp`] = new Uint8Array(await blob.arrayBuffer());
+                    }
+                    if (i % nth === 0) phoneIndex++;
+                    step((i + 1) / count);
+                }
+                return { out, phoneCount: phoneIndex, sets };
+            }
+
+            $("go").addEventListener("click", async () => {
+                const count = +$("count").value;
+                const nth = Math.max(1, +$("nth").value);
+                const quality = Math.min(1, Math.max(0.5, +$("quality").value));
+                $("go").disabled = true;
+                $("bar").hidden = false;
+                const { out, phoneCount, sets } = await take(count, [+$("wide").value, +$("phone").value], quality, nth, (p) => ($("bar").value = p));
+                const size = (prefix) =>
+                    Object.entries(out)
+                        .filter(([k]) => k.startsWith(prefix))
+                        .reduce((a, [, v]) => a + v.length, 0);
+                const settings = `const frames = {
+    wide: { src: "/frames/wide/{0000}.webp", count: ${count} },
+    phone: { src: "/frames/phone/{0000}.webp", count: ${phoneCount} },
+};`;
+                out["frames.js"] = new TextEncoder().encode(settings + "\n");
+                const zip = zipSync(out, { level: 0 }); // WebP is compressed already
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob([zip], { type: "application/zip" }));
+                a.download = `${file.name.replace(/\.[^.]+$/, "")}-frames.zip`;
+                a.click();
+                $("info").textContent =
+                    `wide: ${count} frames, ${sets[0].w}×${sets[0].h}, ${(size("wide/") / 1048576).toFixed(1)} MB · ` +
+                    `phone: ${phoneCount} frames, ${sets[1].w}×${sets[1].h}, ${(size("phone/") / 1048576).toFixed(1)} MB`;
+                $("code").textContent = settings;
+                $("code").hidden = false;
+                $("go").disabled = false;
+            });
+        </script>
+    </body>
+</html>

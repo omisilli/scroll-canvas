@@ -1,0 +1,28 @@
+/*
+ * scroll-canvas — the CSS half.
+ *
+ * Set on the canvas (or above), in media queries for each screen size:
+ *   --pg-scroll-canvas-set   which of the frame sets this screen uses, by
+ *                            name. Default: the first one given
+ *   --pg-scroll-canvas-fit   cover (default): fill the box, cut the rest ·
+ *                            contain: show it all — frames on a
+ *                            transparent background
+ *
+ * States, on the canvas, for your own CSS:
+ *   [data-pg-scroll-canvas="loading"]    no frame drawn yet
+ *   [data-pg-scroll-canvas="ready"]      a frame is drawn
+ *   [data-pg-scroll-canvas="complete"]   every frame is in
+ */
+
+@property --pg-scroll-canvas-fit {
+    syntax: "cover | contain";
+    inherits: true;
+    initial-value: cover;
+}
+
+/* The canvas fills the box it is given; its pixels are set by index.ts. */
+:where([data-pg-scroll-canvas]) {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
