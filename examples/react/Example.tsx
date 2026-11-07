@@ -4,6 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { useLenis } from "lenis/react";
 import { scrollCanvas, releaseScrollCanvas } from "@plusguard/scroll-canvas";
 import "@plusguard/scroll-canvas/index.css";
 
@@ -38,20 +39,24 @@ const frames = {
 export function ScrollCanvasScene() {
     const scene = useRef<HTMLElement>(null);
     const canvas = useRef<HTMLCanvasElement>(null);
+    // One smoothing: the site's Lenis glides already, so scrub: true with
+    // it; scrub: 1 without (useLenis is undefined then). On a site with no
+    // Lenis at all, leave this out and write scrub: 1.
+    const lenis = useLenis();
 
     useGSAP(
         () => {
             const c = canvas.current;
             if (!c) return;
             const tl = gsap.timeline({
-                scrollTrigger: { trigger: scene.current, start: "top top", end: "+=500%", pin: true, scrub: 1 },
+                scrollTrigger: { trigger: scene.current, start: "top top", end: "+=500%", pin: true, scrub: lenis ? true : 1 },
             });
             tl.add(scrollCanvas(c, { gsap, frames }), 0)
                 .from(".title", { opacity: 0, y: 30, duration: 0.1 }, 0.3)
                 .from(".btn", { opacity: 0, y: 40, duration: 0.1 }, 0.8);
             return () => releaseScrollCanvas(c);
         },
-        { scope: scene },
+        { scope: scene, dependencies: [lenis] },
     );
 
     return (

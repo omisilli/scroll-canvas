@@ -17,7 +17,7 @@ reduced motion. Titles, buttons, fades go on the same GSAP timeline.
 ```sh
 npm install gsap
 npm install github:omisilli/gsap-connector#v1.0.1
-npm install github:omisilli/scroll-canvas#v1.1.0
+npm install github:omisilli/scroll-canvas#v1.1.1
 ```
 
 ```html
@@ -56,7 +56,8 @@ const frames = {
 };
 
 const tl = gsap.timeline({
-    scrollTrigger: { trigger: ".scene", start: "top top", end: "+=500%", pin: true, scrub: 1 },
+    // One smoothing: Lenis glides already; without it, scrub: 1 does.
+    scrollTrigger: { trigger: ".scene", start: "top top", end: "+=500%", pin: true, scrub: lenis ? true : 1 },
 });
 tl.add(scrollCanvas(document.querySelector(".scene canvas"), { gsap, frames }), 0) // the frames, start to end
     .from(".title", { opacity: 0, y: 30, duration: 0.1 }, 0.3)                    // a title at 30%
@@ -66,12 +67,12 @@ tl.add(scrollCanvas(document.querySelector(".scene canvas"), { gsap, frames }), 
 ### Without a build step
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.0/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.1/index.css" />
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
 <script type="module">
     import { connectGsap } from "https://cdn.jsdelivr.net/gh/omisilli/gsap-connector@v1.0.1/dist/index.js";
-    import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.0/dist/index.js";
+    import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.1/dist/index.js";
     …
 </script>
 ```
@@ -210,7 +211,7 @@ timeline — its one second is the timeline's whole length, so the other
 tweens' positions read as fractions — or give it a ScrollTrigger of its own:
 
 ```ts
-scrollCanvas(canvas, { gsap, frames, scrollTrigger: { trigger: ".scene", pin: true, scrub: 1, end: "+=400%" } });
+scrollCanvas(canvas, { gsap, frames, scrollTrigger: { trigger: ".scene", pin: true, scrub: lenis ? true : 1, end: "+=400%" } });
 ```
 
 - **Frame sets.** `frames` names one or more sets, `{ src, count, start? }`.
@@ -364,11 +365,13 @@ paste the `frames.js` it wrote, with the folder's address.
 useGSAP(
     () => {
         const c = canvas.current!;
-        const tl = gsap.timeline({ scrollTrigger: { trigger: scene.current, pin: true, scrub: 1, end: "+=500%" } });
+        const tl = gsap.timeline({
+            scrollTrigger: { trigger: scene.current, pin: true, scrub: lenis ? true : 1, end: "+=500%" },
+        });
         tl.add(scrollCanvas(c, { gsap, frames }), 0).from(".title", { opacity: 0 }, 0.3);
         return () => releaseScrollCanvas(c);
     },
-    { scope: scene },
+    { scope: scene, dependencies: [lenis] }, // lenis: useLenis(), on a site with Lenis
 );
 ```
 
@@ -381,7 +384,14 @@ returned function lets the canvas go. With Lenis, mount gsap-connector's
 ## Alongside
 
 - **Lenis** — through gsap-connector, nothing else. Do not create a second
-  Lenis for the scene.
+  Lenis for the scene. Smooth once: `scrub: true` with Lenis, `scrub: 1`
+  without; Lenis with its default `lerp`, not `duration` — see
+  gsap-connector's "With Lenis, smooth once".
+- **Enough frames for the scroll.** Each frame holds still while the scroll
+  passes its share — `+=300%` on a screen 900px tall is 2700px; with 100
+  frames, 27px each. Lenis moves the page so evenly that the steps between
+  frames show more than with the browser's scroll: give the scene more
+  frames, or a shorter pin.
 - **The PlusGuard scrollbar** — the pin adds the scene's length to the page;
   gsap-connector refreshes ScrollTrigger, the scrollbar watches the page's
   size: both follow.
@@ -393,7 +403,8 @@ returned function lets the canvas go. With Lenis, mount gsap-connector's
 double-clicking. Gaga Furniture's "Yan Yana" sofa (used with permission):
 256 frames for wide screens, 128 for phones. Switches for Lenis (with
 gsap-connector), the frame set (by screen, or either one), `cover` against
-`contain`, `scrub: 1` against `scrub: true`, and the title and button on
+`contain`, the scrub (by default `true` with Lenis, `1` without — or either
+one), and the title and button on
 the timeline against the frames alone; a panel shows the set, how many
 frames are in, the state, and the frame. Below it, two scenes that play
 once when they come into view — a laptop opening, a desktop turning and

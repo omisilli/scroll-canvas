@@ -8,8 +8,11 @@
  *   With the scroll — the sequence is a tween of one second; put it on a
  *   ScrollTrigger timeline and the scroll runs it, forwards and back:
  *
- *     const tl = gsap.timeline({ scrollTrigger: { trigger: section, pin: true, scrub: 1, end: "+=500%" } });
+ *     const tl = gsap.timeline({ scrollTrigger: { trigger: section, pin: true, scrub: lenis ? true : 1, end: "+=500%" } });
  *     tl.add(scrollCanvas(canvas, { gsap, frames }), 0).from(".title", { opacity: 0 }, 0.3);
+ *
+ *   One smoothing: with Lenis, scrub: true — Lenis already glides; without
+ *   it, a number (scrub: 1) smooths the scroll.
  *
  *   Once, when it comes into view — play: true. The sequence plays by
  *   itself at its own pace (30 frames a second unless play.duration says
