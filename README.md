@@ -291,6 +291,73 @@ of sitting in a white box.
 - **Quality 0.75–0.85** is the right range for WebP; a white or plain
   background compresses to very little.
 
+## With a CMS
+
+**Upload the video, not the frames.** A visitor never gets the video —
+only the frames — but the frames come from it, the way an image's sizes
+come from the image. One scene is 100 to 400 files; nobody should upload
+those by hand, nor keep them in step when the film changes.
+
+1. **The editor uploads the video,** one media item, one file.
+2. **The server makes the frames** when it is uploaded, and puts them in
+   that item's folder — the same as `tools/convert.html`, on the server:
+
+   ```sh
+   # in /media/42/frames/
+   ffmpeg -i video.mp4 -vf "scale=2176:-2" -c:v libwebp -quality 80 -start_number 0 wide/%04d.webp
+   ffmpeg -i video.mp4 -vf "select=not(mod(n\,2)),scale=1088:-2" -vsync vfr -c:v libwebp -quality 80 -start_number 0 phone/%04d.webp
+   ffmpeg -sseof -0.1 -i video.mp4 -frames:v 1 -vf "scale=2176:-2" -c:v libwebp -quality 85 still.webp
+   ```
+
+   How many frames each set has is how many files it wrote.
+
+3. **The API gives the setting** with the item — ready to hand to
+   `scrollCanvas`:
+
+   ```json
+   {
+       "wide": { "src": "/media/42/frames/wide/{0000}.webp", "count": 256 },
+       "phone": { "src": "/media/42/frames/phone/{0000}.webp", "count": 128 },
+       "still": "/media/42/frames/still.webp"
+   }
+   ```
+
+4. **A new video** makes new frames. The original stays in the CMS, as the
+   source; it is never served.
+
+The front end only passes it on — `still` is the picture for screens and
+visitors that do not get the film (see "Resting on one frame"):
+
+```tsx
+type Scene = { wide: FrameSet; phone: FrameSet; still: string };
+
+export function Hero({ scene }: { scene: Scene }) {
+    const box = useRef<HTMLDivElement>(null);
+    const canvas = useRef<HTMLCanvasElement>(null);
+
+    useGSAP(
+        () => {
+            const c = canvas.current!;
+            const frames = { wide: scene.wide, phone: scene.phone };
+            gsap.timeline().add(scrollCanvas(c, { gsap, frames, play: true }), 0);
+            return () => releaseScrollCanvas(c);
+        },
+        { scope: box, dependencies: [scene] },
+    );
+
+    return (
+        <div ref={box} className="hero">
+            <canvas ref={canvas} />
+            <img className="picture" src={scene.still} alt="" />
+        </div>
+    );
+}
+```
+
+**Until the server does it,** by hand: `tools/convert.html` makes the zip;
+put its `wide/` and `phone/` in a folder of their own for each scene, and
+paste the `frames.js` it wrote, with the folder's address.
+
 ## React (Next)
 
 ```tsx
