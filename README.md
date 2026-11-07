@@ -329,8 +329,10 @@ gsap-connector), the frame set (by screen, or either one), `cover` against
 `contain`, `scrub: 1` against `scrub: true`, and the title and button on
 the timeline against the frames alone; a panel shows the set, how many
 frames are in, the state, and the frame. Below it, two scenes that play
-once when they come into view: one always, one only on a wide Retina
-screen — a picture elsewhere — with switches for playing and resting. To
+once when they come into view — a laptop opening, a desktop turning and
+coming apart, drawn by a friend of the project: one always, one only on a
+wide Retina screen, a picture elsewhere — with switches for playing and
+resting. To
 see one give up waiting, slow the network in the browser's tools and
 reload.
 

@@ -2,8 +2,10 @@
 <!-- Open by double-clicking: the scripts load from jsDelivr, the frames sit
      beside this file. Pinned to this release, so the page and the code
      always match. The switches reload the page with ?lenis, ?set, ?fit,
-     ?scrub, ?extras, ?once and ?retina. The frames are Gaga Furniture's "Yan Yana" sofa,
-     taken apart and put together — used with permission. -->
+     ?scrub, ?extras, ?once and ?retina. The scroll scene's frames are Gaga
+     Furniture's "Yan Yana" sofa, taken apart and put together — used with
+     permission; the two scenes below it, a laptop and a desktop drawn by a
+     friend of the project. -->
 <html lang="en">
     <head>
         <meta charset="utf-8" />
@@ -166,6 +168,20 @@
             .once canvas {
                 --pg-scroll-canvas-fit: contain;
             }
+            /* The laptop's frames are white: cover, dark caption. */
+            .once.light canvas {
+                --pg-scroll-canvas-fit: cover;
+            }
+            .once.dark {
+                background: #000;
+                border-color: #000;
+            }
+            .once.dark canvas {
+                --pg-scroll-canvas-fit: cover;
+            }
+            .once.dark .caption {
+                color: #fff;
+            }
             .once .caption {
                 position: absolute;
                 left: 0;
@@ -188,9 +204,9 @@
                 inset: 0;
                 width: 100%;
                 height: 100%;
-                object-fit: contain;
+                object-fit: cover;
                 display: none;
-                background: #fff;
+                background: #000;
             }
             .once:has(canvas[data-pg-scroll-canvas-still="true"]) .picture {
                 display: block;
@@ -275,9 +291,9 @@
             <p>
                 <code>play: true</code> — no scroll needed: when half of it is on screen and every frame is in, it plays
                 by itself and stops on its last frame, the way Apple's hero films do. The caption is on the same
-                timeline, at 3 seconds. Reload to see it again. Frames not in within <code>timeout</code> (5 s) after it
-                came into view: it does not play — the last frame, the caption in. Here the scene above has loaded
-                the same frames already; to see it give up, slow the network in the browser's tools (Network ›
+                timeline, at 2 seconds. Reload to see it again. Frames not in within <code>timeout</code> (5 s) after it
+                came into view: it does not play — the last frame, the caption in. Here it has loaded
+                its frames already as you scrolled near; to see it give up, slow the network in the browser's tools (Network ›
                 Slow 4G, cache off) and reload.
             </p>
             <div class="switches">
@@ -287,9 +303,9 @@
                     <a data-q="once" data-v="still">rests — motion: none</a>
                 </div>
             </div>
-            <div class="once" id="always">
-                <canvas aria-label="The Yan Yana sofa, put together"></canvas>
-                <p class="caption c-always">Put together in seconds</p>
+            <div class="once light" id="always">
+                <canvas aria-label="A laptop opening"></canvas>
+                <p class="caption c-always">Opens in seconds</p>
                 <span class="badge">still</span>
             </div>
 
@@ -309,9 +325,9 @@
                     <a data-q="retina" data-v="still">rests — as on a phone</a>
                 </div>
             </div>
-            <div class="once" id="retina">
-                <canvas aria-label="The Yan Yana sofa, taken apart"></canvas>
-                <img class="picture" src="./frames/wide/0128.webp" alt="The Yan Yana sofa, taken apart" />
+            <div class="once dark" id="retina">
+                <canvas aria-label="A desktop computer, turning and coming apart"></canvas>
+                <img class="picture" src="./frames/macpro/wide/0179.webp" alt="A desktop computer, opened up" />
                 <p class="caption c-retina">Every part, in its place</p>
                 <span class="badge">a picture, not the film</span>
             </div>
@@ -350,8 +366,8 @@
             // Two sets: "wide" first, the default; "phone" where the CSS
             // above says so.
             const frames = {
-                wide: { src: "./frames/wide/{0000}.webp", count: 256 },
-                phone: { src: "./frames/phone/{0000}.webp", count: 128 },
+                wide: { src: "./frames/sofa/wide/{0000}.webp", count: 256 },
+                phone: { src: "./frames/sofa/phone/{0000}.webp", count: 128 },
             };
 
             const tl = gsap.timeline({
@@ -373,18 +389,28 @@
             // to its end when it should not.
             const always = document.querySelector("#always canvas");
             if (query.get("once") === "still") always.style.setProperty("--pg-scroll-canvas-motion", "none");
+            // A laptop: 100 frames, 3.3 seconds at 30 a second.
+            const laptop = {
+                wide: { src: "./frames/macbook/wide/{0000}.webp", count: 100 },
+                phone: { src: "./frames/macbook/phone/{0000}.webp", count: 50 },
+            };
             const once1 = gsap.timeline();
             once1
-                .add(scrollCanvas(always, { gsap, frames, play: { duration: 4 } }), 0)
-                .from(".c-always", { opacity: 0, y: 20, duration: 0.6 }, 3);
+                .add(scrollCanvas(always, { gsap, frames: laptop, play: true }), 0)
+                .from(".c-always", { opacity: 0, y: 20, duration: 0.6 }, 2);
 
             const retina = document.querySelector("#retina canvas");
             if (query.get("retina") === "play") retina.style.setProperty("--pg-scroll-canvas-motion", "auto");
             if (query.get("retina") === "still") retina.style.setProperty("--pg-scroll-canvas-motion", "none");
+            // A desktop: 180 frames, 6 seconds.
+            const desktop = {
+                wide: { src: "./frames/macpro/wide/{0000}.webp", count: 180 },
+                phone: { src: "./frames/macpro/phone/{0000}.webp", count: 90 },
+            };
             const once2 = gsap.timeline();
             once2
-                .add(scrollCanvas(retina, { gsap, frames, play: { duration: 4 }, still: 0.5 }), 0)
-                .from(".c-retina", { opacity: 0, y: 20, duration: 0.6 }, 3);
+                .add(scrollCanvas(retina, { gsap, frames: desktop, play: true }), 0)
+                .from(".c-retina", { opacity: 0, y: 20, duration: 0.6 }, 4);
 
             // The switches: each one a link to this page with one value changed.
             document.querySelectorAll("[data-q]").forEach((a) => {
@@ -413,7 +439,7 @@
                 const loaded =
                     location.protocol === "file:"
                         ? "– (file://)"
-                        : performance.getEntriesByType("resource").filter((r) => r.name.includes(`/frames/${set}/`)).length;
+                        : performance.getEntriesByType("resource").filter((r) => r.name.includes(`/frames/sofa/${set}/`)).length;
                 status.textContent =
                     `Lenis  : ${lenis ? "on, via gsap-connector" : "off"}\n` +
                     `set    : ${set} · ${canvas.width}×${canvas.height}px\n` +
