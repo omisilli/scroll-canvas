@@ -2,14 +2,14 @@
 <!-- Open by double-clicking: the scripts load from jsDelivr, the frames sit
      beside this file. Pinned to this release, so the page and the code
      always match. The switches reload the page with ?lenis, ?set, ?fit,
-     ?scrub and ?extras. The frames are Gaga Furniture's "Yan Yana" sofa,
+     ?scrub, ?extras, ?once and ?retina. The frames are Gaga Furniture's "Yan Yana" sofa,
      taken apart and put together — used with permission. -->
 <html lang="en">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>scroll-canvas — example</title>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.0.0/index.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.0/index.css" />
         <!-- Only takes effect with ?lenis: it styles html.lenis. -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.css" />
         <style>
@@ -153,6 +153,62 @@
                 font-weight: 600;
                 white-space: nowrap;
             }
+
+            /* --- Two scenes that play once, when they come into view --- */
+            .once {
+                position: relative;
+                aspect-ratio: 16 / 9;
+                border-radius: 1rem;
+                overflow: hidden;
+                background: #fff;
+                border: 1px solid var(--line);
+            }
+            .once canvas {
+                --pg-scroll-canvas-fit: contain;
+            }
+            .once .caption {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 6%;
+                text-align: center;
+                font-size: clamp(1.1rem, 3.5vw, 2rem);
+                font-weight: 800;
+                color: #18181b;
+            }
+            /* The second: only on a wide Retina screen. Elsewhere it rests
+               on its still frame — and a picture of its own takes its place. */
+            @media (width < 64rem), (resolution < 2x) {
+                #retina canvas {
+                    --pg-scroll-canvas-motion: none;
+                }
+            }
+            .once .picture {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: none;
+                background: #fff;
+            }
+            .once:has(canvas[data-pg-scroll-canvas-still="true"]) .picture {
+                display: block;
+            }
+            .once .badge {
+                position: absolute;
+                top: 0.75rem;
+                left: 0.75rem;
+                font: 0.75rem/1.4 ui-monospace, monospace;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.4rem;
+                color: #fff;
+                background: #18181b;
+                display: none;
+            }
+            .once:has(canvas[data-pg-scroll-canvas-still="true"]) .badge {
+                display: block;
+            }
         </style>
     </head>
     <body>
@@ -213,14 +269,60 @@
                 only drawn. Watch the panel on a slow connection: the first frame comes at once, then frames
                 here and there across the whole sequence, then the gaps between.
             </p>
-            <div style="height: 80vh"></div>
+            <div style="height: 40vh"></div>
+
+            <h2>Played once, when it comes into view</h2>
+            <p>
+                <code>play: true</code> — no scroll needed: when half of it is on screen and every frame is in, it plays
+                by itself and stops on its last frame, the way Apple's hero films do. The caption is on the same
+                timeline, at 3 seconds. Reload to see it again. Frames not in within <code>timeout</code> (5 s) after it
+                came into view: it does not play — the last frame, the caption in. Here the scene above has loaded
+                the same frames already; to see it give up, slow the network in the browser's tools (Network ›
+                Slow 4G, cache off) and reload.
+            </p>
+            <div class="switches">
+                <div>
+                    <span>This scene</span>
+                    <a data-q="once" data-v="">plays</a>
+                    <a data-q="once" data-v="still">rests — motion: none</a>
+                </div>
+            </div>
+            <div class="once" id="always">
+                <canvas aria-label="The Yan Yana sofa, put together"></canvas>
+                <p class="caption c-always">Put together in seconds</p>
+                <span class="badge">still</span>
+            </div>
+
+            <div style="height: 50vh"></div>
+
+            <h2>Only on a wide Retina screen</h2>
+            <p>
+                The same, but CSS says where it moves: <code>@media (width &lt; 64rem), (resolution &lt; 2x)</code> sets
+                <code>--pg-scroll-canvas-motion: none</code> — on a phone, or a screen that is not Retina, it rests,
+                and <code>data-pg-scroll-canvas-still="true"</code> lets a picture of its own take its place.
+            </p>
+            <div class="switches">
+                <div>
+                    <span>This screen</span>
+                    <a data-q="retina" data-v="">as it is — CSS decides</a>
+                    <a data-q="retina" data-v="play">plays — as on a wide Retina</a>
+                    <a data-q="retina" data-v="still">rests — as on a phone</a>
+                </div>
+            </div>
+            <div class="once" id="retina">
+                <canvas aria-label="The Yan Yana sofa, taken apart"></canvas>
+                <img class="picture" src="./frames/wide/0128.webp" alt="The Yan Yana sofa, taken apart" />
+                <p class="caption c-retina">Every part, in its place</p>
+                <span class="badge">a picture, not the film</span>
+            </div>
+            <div style="height: 60vh"></div>
         </main>
 
         <!-- GSAP: the page's own, loaded once. -->
         <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
         <script type="module">
-            import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.0.0/dist/index.js";
+            import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.0/dist/index.js";
             import { connectGsap } from "https://cdn.jsdelivr.net/gh/omisilli/gsap-connector@v1/dist/index.js";
 
             const { gsap, ScrollTrigger } = window;
@@ -266,6 +368,24 @@
                 gsap.set([".title", ".btn"], { opacity: 0 });
             }
 
+            // The two scenes that play once. Each on a timeline of its own:
+            // scroll-canvas holds it at its start, and plays it — or jumps it
+            // to its end when it should not.
+            const always = document.querySelector("#always canvas");
+            if (query.get("once") === "still") always.style.setProperty("--pg-scroll-canvas-motion", "none");
+            const once1 = gsap.timeline();
+            once1
+                .add(scrollCanvas(always, { gsap, frames, play: { duration: 4 } }), 0)
+                .from(".c-always", { opacity: 0, y: 20, duration: 0.6 }, 3);
+
+            const retina = document.querySelector("#retina canvas");
+            if (query.get("retina") === "play") retina.style.setProperty("--pg-scroll-canvas-motion", "auto");
+            if (query.get("retina") === "still") retina.style.setProperty("--pg-scroll-canvas-motion", "none");
+            const once2 = gsap.timeline();
+            once2
+                .add(scrollCanvas(retina, { gsap, frames, play: { duration: 4 }, still: 0.5 }), 0)
+                .from(".c-retina", { opacity: 0, y: 20, duration: 0.6 }, 3);
+
             // The switches: each one a link to this page with one value changed.
             document.querySelectorAll("[data-q]").forEach((a) => {
                 const next = new URLSearchParams(query);
@@ -299,7 +419,9 @@
                     `set    : ${set} · ${canvas.width}×${canvas.height}px\n` +
                     `loaded : ${typeof loaded === "number" ? Math.min(loaded, count) : loaded} / ${count}\n` +
                     `state  : ${canvas.getAttribute("data-pg-scroll-canvas")}\n` +
-                    `frame  : ${Math.round(tl.progress() * (count - 1))}`;
+                    `frame  : ${Math.round(tl.progress() * (count - 1))}\n` +
+                    `once   : ${always.getAttribute("data-pg-scroll-canvas-play")}${always.getAttribute("data-pg-scroll-canvas-still") === "true" ? ", still" : ""}\n` +
+                    `retina : ${retina.getAttribute("data-pg-scroll-canvas-play")}${retina.getAttribute("data-pg-scroll-canvas-still") === "true" ? ", still" : ""}`;
                 requestAnimationFrame(show);
             };
             show();

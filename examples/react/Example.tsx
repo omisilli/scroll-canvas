@@ -66,3 +66,50 @@ export function ScrollCanvasScene() {
         </section>
     );
 }
+
+/*
+ * Played once, when it comes into view: play: true. When half the canvas is
+ * on screen and every frame is in, it plays by itself — at 30 frames a
+ * second, or play.duration — and stops on its last frame. Its timeline is
+ * its own, so the caption on it is in seconds.
+ *
+ * Not on every screen: the CSS below rests it on its still frame on phones
+ * and screens that are not Retina, and data-pg-scroll-canvas-still lets a
+ * picture of its own take its place:
+ *
+ *   @media (width < 64rem), (resolution < 2x) { .hero canvas { --pg-scroll-canvas-motion: none; } }
+ *   .hero .picture { display: none; }
+ *   .hero:has(canvas[data-pg-scroll-canvas-still="true"]) .picture { display: block; }
+ *
+ * Nor when the frames are late: not in within 5 seconds of coming into view,
+ * it rests on the last frame with the caption in.
+ */
+export function PlayOnce() {
+    const box = useRef<HTMLDivElement>(null);
+    const canvas = useRef<HTMLCanvasElement>(null);
+
+    useGSAP(
+        () => {
+            const c = canvas.current;
+            if (!c) return;
+            const tl = gsap.timeline();
+            tl.add(scrollCanvas(c, { gsap, frames, play: true }), 0).from(
+                ".caption",
+                { opacity: 0, y: 20, duration: 0.6 },
+                3,
+            );
+            return () => releaseScrollCanvas(c);
+        },
+        { scope: box },
+    );
+
+    return (
+        <div ref={box} className="hero" style={{ position: "relative", aspectRatio: "16 / 9" }}>
+            <canvas ref={canvas} aria-label="The product, put together" />
+            <img className="picture" src="/frames/wide/0255.webp" alt="The product, put together" />
+            <p className="caption" style={{ position: "absolute", bottom: "6%", width: "100%", textAlign: "center" }}>
+                Put together in seconds
+            </p>
+        </div>
+    );
+}

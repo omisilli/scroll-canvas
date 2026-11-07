@@ -1,6 +1,6 @@
 {
     "name": "@plusguard/scroll-canvas",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Apple-style scroll scenes: an image sequence drawn on a canvas, frame by frame, driven by your own GSAP ScrollTrigger — titles and buttons on the same timeline. Sharp on Retina, lighter frames for phones, loads in a smart order, rests on a still frame for reduced motion. Takes your GSAP — no second copy.",
     "type": "module",
     "main": "./dist/index.js",

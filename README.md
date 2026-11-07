@@ -1,7 +1,8 @@
 # scroll-canvas
 
-Scroll scenes the way Apple's product pages make them: an image sequence
-drawn on a canvas, frame by frame, as the page scrolls — forwards and back.
+Scenes the way Apple's product pages make them: an image sequence drawn on
+a canvas, frame by frame — with the scroll, forwards and back, or played
+once by itself when it comes into view.
 GSAP's ScrollTrigger pins the scene and drives it; this package is the
 sequence's part: it loads the frames in a smart order, draws them sharp on
 every screen, gives phones a lighter set, and rests on a still frame for
@@ -16,7 +17,7 @@ reduced motion. Titles, buttons, fades go on the same GSAP timeline.
 ```sh
 npm install gsap
 npm install github:omisilli/gsap-connector#v1.0.1
-npm install github:omisilli/scroll-canvas#v1.0.0
+npm install github:omisilli/scroll-canvas#v1.1.0
 ```
 
 ```html
@@ -65,12 +66,12 @@ tl.add(scrollCanvas(document.querySelector(".scene canvas"), { gsap, frames }), 
 ### Without a build step
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.0.0/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.0/index.css" />
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
 <script type="module">
     import { connectGsap } from "https://cdn.jsdelivr.net/gh/omisilli/gsap-connector@v1.0.1/dist/index.js";
-    import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.0.0/dist/index.js";
+    import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.0/dist/index.js";
     …
 </script>
 ```
@@ -100,6 +101,7 @@ no larger.
 | Smoothness       | Good; seeking depends on the browser, may stutter on iOS | Flawless on every frame, every device: the frame is ready, only drawn |
 | Picture quality  | Limited by the video's compression            | Every frame a full picture                              |
 | Transparent background | Not in practice                         | Yes (WebP / PNG): the product can float over the page   |
+| Encoding         | H.264 with a keyframe on **every** frame (`-g 1`) and `faststart` — otherwise scrolling back stutters, rebuilding from the last keyframe | None: every frame is a picture of its own. The source video only has to open in the browser — any codec, any keyframes |
 | Size             | One file, small                               | Frames × picture size; heavier, many requests           |
 | Preparing        | One ffmpeg line                               | Exporting the frames — from a 3D program, or from a video ([`tools/convert.html`](tools/convert.html)) |
 
@@ -125,6 +127,80 @@ GSAP on purpose:
 So without GSAP it can be done — but it stays a picture that moves, and
 every scene after it starts from nothing. GSAP and ScrollTrigger cost about
 45 KB (compressed), once, for all of them.
+
+## Two ways to play it
+
+**With the scroll** — the sequence is one tween of a ScrollTrigger timeline,
+as above: scroll down, it plays; scroll back, it plays backwards.
+
+**Once, when it comes into view** — `play: true`. The way Apple's hero films
+play: when half the canvas is on screen and every frame is in, the sequence
+plays by itself, at 30 frames a second, and stops on its last frame. Put it
+on a timeline of its own, and the titles on that timeline play with it — in
+seconds now:
+
+```ts
+const tl = gsap.timeline();
+tl.add(scrollCanvas(canvas, { gsap, frames, play: true }), 0) // 100 frames: 3.3 seconds
+    .from(".title", { opacity: 0, y: 20, duration: 0.6 }, 2);  // the title at 2 s
+```
+
+scroll-canvas holds that timeline at its start, and plays it — or, if it
+should not play, jumps it to its end: the last frame, the titles in.
+
+| `play` option | Default                               | Meaning                                                   |
+| ------------- | ------------------------------------- | --------------------------------------------------------- |
+| `duration`    | the frames at 30 a second             | Seconds                                                   |
+| `timeout`     | `5000`                                | Milliseconds after it came into view to give up waiting for the frames — and show the still frame instead |
+| `visible`     | `0.5`                                 | How much of the canvas is on screen before it plays       |
+
+Apple's Mac mini page does the same with a video: it plays once, unless it
+has not loaded within five seconds or reduced motion is asked for — then a
+still picture takes its place.
+
+## Resting on one frame
+
+Sometimes the scene should not move — and show one frame instead, `still`
+(0 to 1: default `0`, the first; with `play`, `1`, the last):
+
+- **Reduced motion** asked for by the visitor.
+- **`--pg-scroll-canvas-motion: none`** — your CSS, per screen size or per
+  pixel density, in a media query:
+
+  ```css
+  /* Only on wide Retina screens; a still frame everywhere else. */
+  @media (width < 64rem), (resolution < 2x) {
+      .hero canvas {
+          --pg-scroll-canvas-motion: none;
+      }
+  }
+  ```
+
+- **`play`, timed out** — the frames did not come in time.
+
+The canvas then carries `data-pg-scroll-canvas-still="true"`. The still
+frame is drawn on it; a picture of your own can take its place instead:
+
+```html
+<div class="hero">
+    <canvas></canvas>
+    <img class="picture" src="/hero-still.webp" alt="…" />
+</div>
+```
+
+```css
+.hero .picture {
+    display: none;
+}
+.hero:has(canvas[data-pg-scroll-canvas-still="true"]) .picture {
+    display: block;
+}
+```
+
+Apple picks by screen too: one file for small screens, another for large,
+a sharper one for Retina. Here that is the frame sets
+(`--pg-scroll-canvas-set`) — and whether it moves at all,
+`--pg-scroll-canvas-motion`.
 
 ## What it does
 
@@ -154,23 +230,27 @@ scrollCanvas(canvas, { gsap, frames, scrollTrigger: { trigger: ".scene", pin: tr
 - **Fit.** `--pg-scroll-canvas-fit: cover` (default) fills the box and cuts
   the rest, as `object-fit: cover`; `contain` shows the whole frame — for
   frames on a transparent background, floating over the page.
-- **Reduced motion.** The scene rests on one frame (`still`, 0 to 1, default
-  `0`) and the scroll leaves it there; the rest of the timeline is yours.
-- **States, for your CSS.** `data-pg-scroll-canvas` on the canvas:
+- **Resting on one frame** with reduced motion, `--pg-scroll-canvas-motion:
+  none`, or `play` timed out — see above.
+- **States, for your CSS.** On the canvas: `data-pg-scroll-canvas`
   `"loading"`, `"ready"` (a frame is drawn), `"complete"` (every frame is
-  in).
+  in); `data-pg-scroll-canvas-still` `"true"` while resting on one frame;
+  with `play`, `data-pg-scroll-canvas-play` `"waiting"`, `"playing"`,
+  `"played"`.
 
 | Option   | Default | Meaning                                                      |
 | -------- | ------- | ------------------------------------------------------------ |
 | `gsap`   | —       | Your GSAP. Required                                          |
 | `frames` | —       | The frame sets, by name. Required                            |
-| `still`  | `0`     | With reduced motion: the frame to rest on, `0` to `1`        |
+| `still`  | `0` (`1` with `play`) | The frame to rest on, `0` to `1` — see "Resting on one frame" |
+| `play`   | —       | `true`, or `{ duration, timeout, visible }`: play once when it comes into view |
 | anything else | —  | Handed to `gsap.to` — `scrollTrigger`, `onUpdate`, …         |
 
 | CSS variable              | Default        | Meaning                                       |
 | ------------------------- | -------------- | --------------------------------------------- |
 | `--pg-scroll-canvas-set`  | the first set  | Which set this screen uses, by name           |
 | `--pg-scroll-canvas-fit`  | `cover`        | `cover` or `contain`                          |
+| `--pg-scroll-canvas-motion` | `auto`       | `none`: rest on the still frame               |
 
 `releaseScrollCanvas(canvas)` lets a canvas go: its observers off, its
 frames dropped. Calling `scrollCanvas` again on the same canvas does it
@@ -248,7 +328,11 @@ double-clicking. Gaga Furniture's "Yan Yana" sofa (used with permission):
 gsap-connector), the frame set (by screen, or either one), `cover` against
 `contain`, `scrub: 1` against `scrub: true`, and the title and button on
 the timeline against the frames alone; a panel shows the set, how many
-frames are in, the state, and the frame.
+frames are in, the state, and the frame. Below it, two scenes that play
+once when they come into view: one always, one only on a wide Retina
+screen — a picture elsewhere — with switches for playing and resting. To
+see one give up waiting, slow the network in the browser's tools and
+reload.
 
 ## From the old Gaga page
 
