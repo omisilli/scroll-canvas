@@ -1,6 +1,6 @@
 {
     "name": "@plusguard/scroll-canvas",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Apple-style scroll scenes: an image sequence drawn on a canvas, frame by frame, driven by your own GSAP ScrollTrigger — titles and buttons on the same timeline. Sharp on Retina, lighter frames for phones, loads in a smart order, rests on a still frame for reduced motion. Takes your GSAP — no second copy.",
     "type": "module",
     "main": "./dist/index.js",
@@ -17,6 +17,7 @@
     "scripts": {
         "build": "npx -p typescript tsc index.ts --outDir dist --declaration --target es2020 --module es2020 --lib dom,es2020 --strict"
     },
+    "publishConfig": { "access": "public" },
     "license": "MIT",
     "author": "PlusGuard",
     "repository": { "type": "git", "url": "git+https://github.com/omisilli/scroll-canvas.git" },

@@ -16,8 +16,8 @@ reduced motion. Titles, buttons, fades go on the same GSAP timeline.
 
 ```sh
 npm install gsap
-npm install github:omisilli/gsap-connector#v1.0.1
-npm install github:omisilli/scroll-canvas#v1.1.1
+npm install @plusguard/gsap-connector
+npm install @plusguard/scroll-canvas
 ```
 
 ```html
@@ -67,12 +67,12 @@ tl.add(scrollCanvas(document.querySelector(".scene canvas"), { gsap, frames }), 
 ### Without a build step
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.1/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@plusguard/scroll-canvas@1.1.2/index.css" />
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
 <script type="module">
-    import { connectGsap } from "https://cdn.jsdelivr.net/gh/omisilli/gsap-connector@v1.0.1/dist/index.js";
-    import { scrollCanvas } from "https://cdn.jsdelivr.net/gh/omisilli/scroll-canvas@v1.1.1/dist/index.js";
+    import { connectGsap } from "https://cdn.jsdelivr.net/npm/@plusguard/gsap-connector@1.1.2/dist/index.js";
+    import { scrollCanvas } from "https://cdn.jsdelivr.net/npm/@plusguard/scroll-canvas@1.1.2/dist/index.js";
     …
 </script>
 ```
