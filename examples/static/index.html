@@ -21,16 +21,16 @@
                 --fg: #18181b;
                 --muted: #6b6b72;
                 --line: #e4e4e0;
-                color-scheme: light dark;
+                color-scheme: light;
             }
-            @media (prefers-color-scheme: dark) {
-                :root {
-                    --bg: #111113;
-                    --surface: #1b1b1f;
-                    --fg: #ededef;
-                    --muted: #9a9aa3;
-                    --line: #2c2c31;
-                }
+            /* Dark: as the switch says — or the system, its default. */
+            :root[data-scheme="dark"] {
+                --bg: #111113;
+                --surface: #1b1b1f;
+                --fg: #ededef;
+                --muted: #9a9aa3;
+                --line: #2c2c31;
+                color-scheme: dark;
             }
             * {
                 box-sizing: border-box;
@@ -225,7 +225,45 @@
             .once:has(canvas[data-pg-scroll-canvas-still="true"]) .badge {
                 display: block;
             }
+            /* The colour-scheme switch. */
+            .scheme {
+                display: inline-flex;
+                width: fit-content;
+                gap: 0.25rem;
+                margin-top: 1rem;
+                padding: 0.25rem;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+            }
+            .scheme button {
+                padding: 0.35rem 0.8rem;
+                margin: 0;
+                border: 0;
+                border-radius: 999px;
+                font: inherit;
+                font-size: 0.8125rem;
+                line-height: 1.2;
+                color: var(--muted);
+                background: none;
+                cursor: pointer;
+            }
+            .scheme button[aria-pressed="true"] {
+                color: var(--bg);
+                background: var(--fg);
+            }
         </style>
+        <script>
+            // Light or dark before the first paint: the switch's choice — one for
+            // every example — or the system's.
+            (() => {
+                let choice = "system";
+                try {
+                    choice = localStorage.getItem("pg-example-scheme") || "system";
+                } catch {}
+                const dark = choice === "dark" || (choice === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+                document.documentElement.dataset.scheme = dark ? "dark" : "light";
+            })();
+        </script>
     </head>
     <body>
         <div class="status" id="status"></div>
@@ -238,6 +276,11 @@
                 pins the scene and drives the timeline; <code>scrollCanvas(canvas, { gsap, frames })</code> is the
                 sequence's part of it, and the title and the button are two more tweens on it.
             </p>
+            <div class="scheme" role="group" aria-label="Colour scheme">
+                <button type="button" data-scheme-choice="system">System</button>
+                <button type="button" data-scheme-choice="light">Light</button>
+                <button type="button" data-scheme-choice="dark">Dark</button>
+            </div>
             <div class="switches">
                 <div>
                     <span>Smooth scroll</span>
@@ -457,6 +500,41 @@
                 requestAnimationFrame(show);
             };
             show();
+        </script>
+        <script>
+            // The colour-scheme switch: one choice for every example, kept in this
+            // browser — an example open in another tab follows it.
+            (() => {
+                const key = "pg-example-scheme";
+                const root = document.documentElement;
+                const system = matchMedia("(prefers-color-scheme: dark)");
+                const buttons = document.querySelectorAll("[data-scheme-choice]");
+                let choice = "system";
+                try {
+                    choice = localStorage.getItem(key) || "system";
+                } catch {}
+                const apply = () => {
+                    const dark = choice === "dark" || (choice === "system" && system.matches);
+                    root.dataset.scheme = dark ? "dark" : "light";
+                    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.schemeChoice === choice)));
+                };
+                buttons.forEach((b) =>
+                    b.addEventListener("click", () => {
+                        choice = b.dataset.schemeChoice;
+                        try {
+                            localStorage.setItem(key, choice);
+                        } catch {}
+                        apply();
+                    }),
+                );
+                system.addEventListener("change", apply);
+                addEventListener("storage", (e) => {
+                    if (e.key !== key) return;
+                    choice = e.newValue || "system";
+                    apply();
+                });
+                apply();
+            })();
         </script>
     </body>
 </html>
